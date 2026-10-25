@@ -1,0 +1,55 @@
+Source-derived values applied by the current lawn installer
+
+GRID
+  PC daytime board: x=40, y=80, cell width=80, row pitch=100, 9 columns x 5 rows.
+  Plants are anchored at the top-left grid point; their shadow is nudged slightly under the stalk base at x+39, y+56. Zombie shadows use the original plantshadow2 image at the animated _ground track. Zombie depth is sorted from the grid-row anchor (root y + 30 px), so zombies draw in front of plants in their row and lower rows draw in front of higher rows.
+
+PLANTS / PROJECTILES
+  Peashooter cost 100 sun, packet recharge 750 logic ticks, firing launch rate 150 ticks.
+  Peashooter firing animation starts on anim_shooting and the projectile launches at the source timing near the end of the 33-tick sequence.
+  Pea damage=20; speed=3.33 px/source tick.
+  Sunflower cost=50, packet recharge=750 logic ticks, production launch rate=2500 ticks.
+  Sunflower first production timer random 300..1250; later timers random 2350..2500.
+  Sunflower additive white flash ramps over final 100 source ticks before output.
+
+SUN / COINS (Board.cpp, Coin.cpp, Plant.cpp)
+  Logic clock=100 Hz (10ms/source tick).
+  Ambient first sun counter=RandRangeInt(425,700); X=RandRangeInt(100,649), Y=60.
+  Ambient repeat timer=min(950, 425 + numSunsFallen*10) + Rand(275).
+  Sky sun: vx=0, vy=0.67 px/tick, ground Y=Rand(250)+300.
+  Plant sun: vx=-0.4+RandRangeFloat(0,0.8), vy=-1.7-RandRangeFloat(0,1.7), ground Y=plantY+15+Rand(20), gravity=+0.09 px/tick².
+  Sun value=25, both sky- and Sunflower-spawned suns start full-size (scale=1.0); ground lifetime=750 ticks, fade=15 ticks, collect target=(5,0), movement step=1/21 remaining distance per tick, scale=clamp(distance*0.05,0.5,1.0) while being collected.
+
+SEED BANK (Board.cpp, GameConstants.h, SeedPacket.cpp)
+  Normal packets have size 50x70; first packet X=85, card pitch=59; Y=8.
+  Sunflower cost=50, Peashooter=100; recharge=750 ticks.
+  Source sun-counter position: X=34, baseline Y=78.
+  SeedPacket::FlashIfReady emits PARTICLE_SEED_PACKET_FLASH when a packet becomes ready and affordable; SeedPacketFlash.xml specifies emitter offset (25,35), 25-tick particle duration, alpha fade key at 40%. The UI mirrors this with a centered 25-tick flash and the source-style top curtain height, round(68 * remaining / duration) + 2, regardless of current sun balance.
+  Optional originals: SeedBank.png, seeds.png, packet_plants.png, Shovel.png, ShovelBank.png, button_small.png, button_down_small.png, button_left.png, button_middle.png, button_right.png, button_down_left.png, button_down_middle.png, button_down_right.png, options_menuback_.png, options_backtogamebutton0.png, options_backtogamebutton2.png, Store_MainMenuButton.png, Store_MainMenuButtonHighlight.png, Store_MainMenuButtonDown.png, SeedPacketFlash.png, SeedPacketGlow.png. Optional helmet damage artwork: Zombie_cone2.png, Zombie_cone3.png, Zombie_bucket2.png, Zombie_bucket3.png.
+
+ZOMBIES (Zombie.cpp, Zombie.h)
+  Basic health=270. Conehead: body=270, cone armor=370. Buckethead: body=270, bucket armor=1100. Cone/bucket visual damage stages follow Zombie::GetHelmDamageIndex: damage stage 1 when current armor health < floor(max armor * 2/3), stage 2 when current armor health < floor(max armor / 3), and armor drops at 0. For the original maxima the strict cutoffs are <246 and <123 cone health, and <733 and <366 bucket health. Pole Vaulter body=500.
+  Original PickRandomSpeed parameter ranges: ordinary zombies 0.23..0.37, Pole Vaulter while carrying the pole 0.66..0.68. Current sandbox intentionally reduces ordinary and post-vault movement to 0.16..0.22, while the pre-vault run now uses the original 0.66..0.68. Root translation comes from Reanimation::GetTrackVelocity on `_ground` (frame delta * 0.01 * animation rate), keeping walking motion and foot animation coupled.
+  Pole vaulting follows Zombie::UpdateZombiePolevaulter: play `anim_jump` once at 24 fps; compute `mVelX = (mX - plant.mX - 80) / (frame_count / anim_rate * 100)` and translate by that velocity during the jump; then apply `mPosX -= 150` once when the animation ends. The computed landing is locked at takeoff; do not add a separate 150px interpolation over the animation as well.
+  Eating: damage 4 every 4 source ticks (average 1 health/source tick).
+  Zombie hit flash=25 ticks; body-part detach thresholds arm below 2/3 max health, head below 1/3 max health. Once headless, zombies enter an explicit no-bite branch: they cannot select/eat plants or begin another vault, keep walking, and run the source-style random residual-damage check (Rand(5)==0; 1 body damage, or 3 when body max health >=500) until death. The full death animation is allowed to finish before the object is removed.
+
+PARTICLE EMITTERS (original flas/*.xml)
+  ZombieHead: LaunchSpeed=330 => 3.3 px/tick; launch angle 150..185 deg; acceleration Y=17 => 0.17 px/tick²; sandbox ground offset=115 (raised from 90 so the part falls farther); system duration=180; fade after 95%; spin ±720 units with 0.01 source conversion that decays linearly to zero over the first 40%; collision reflect=0.3. Floor contact no longer adds persistent collision spin. Detached sprites rotate around their center pivot to prevent apparent orbiting.
+  ZombieArm: LaunchSpeed=40 => 0.4 px/tick; launch angle 90..185 deg; acceleration Y=15 => 0.15 px/tick²; sandbox ground offset=85 (raised from 60 so the arm falls farther); original emitter system duration=60; fade after 90%; spin 0..360 units with 0.01 source conversion for first 40%; reflect=0.5. Floor contact no longer adds persistent collision spin. Sandbox extends the rendered detached arm's individual visibility to 160 ticks with a late fade for legibility.
+  ZombieTrafficCone: LaunchSpeed=200 => 2 px/tick; angle100..140; acceleration Y=17; ground=90; duration50; fade after80%; reflect=0.3.
+  ZombiePail: LaunchSpeed=200 => 2 px/tick; angle120..180; acceleration Y=17; ground=90; duration50; fade after80%; reflect=0.3.
+
+Seed-bank packet icons are frozen poses: only planted plants update their Reanim player. The grid preview has separate frozen Reanim objects, so it never moves/rescales the packet Peashooter body/head. The packet refresh curtain follows `SeedPacket::Draw` with height round(68 * remaining / duration) + 2 and remains visible even if the player cannot afford the packet; unaffordable cards also use the sandbox gray overlay. The cursor uses the source CursorObject offsets (mouseX-35, mouseY-60 for this sandbox) to render a full-size opaque idle plant following the pointer, with a separate alpha-0.55 ghost snapped to each valid empty cell beneath it. The ready flash follows the `CanPickUp` transition, so a packet that finishes recharging while sun is insufficient still flashes when it later becomes affordable. Menu button placement follows Board::mMenuButton (681,-10,117x46) and uses GameButton::DrawStoneButton left/middle/right art and the shovel bank follows Board::GetShovelButtonRect (x=456 on the 800px sandbox). The Menu overlay freezes source logic ticks and resets the clock baseline on resume; the shovel tool removes a plant from its selected grid tile. Pole Vaulter detached heads use ZombiePoleVaulterHead.png; detached arms use Zombie_polevaulter_outerarm_lower.png with a Reanim track-part fallback. The test sandbox uses original assets when available but is not a complete source-to-GML port. The installer passes static structure tests; GameMaker itself was not launched in this environment.
+
+
+TARGETED FIXES (2026-10-23)
+  Bite consistency: while a zombie is eating, the reach test compares zombie X against target-plant X with the same -60/+20 bounds as target acquisition. The old test compared plant X against zombie X with the opposite bounds and cancelled eating immediately for plants within the extra range, preventing bite timers from reaching 4 ticks when plants were close.
+  Helmet stages: source math from Zombie::GetHelmDamageIndex: return 2 if helmet health < max/3; else return 1 if helmet health < max*2/3; else return 0. The original source updates anim_cone/anim_bucket image overrides to stage 2 and stage 3 when these indices change, then drops the helmet when health reaches 0.
+
+
+TARGETED FIXES (2026-10-23 — draw/FX pass)
+  Depth: sun depth follows its current Y as it falls or collects. Zombie depth uses the board-row anchor (the Reanim root is offset 30px above it), so same-row zombies are in front of their plants and lower-row zombies are in front of higher-row zombies.
+  Packet head: grid ghost animations are separate instances from card icons, preventing ghost positioning/scaling from displacing the packet Peashooter head. The attached head uses local scale 1.0 because the packet body applies the 0.5 card scale to its attachment.
+  Shadows: plant shadow center nudged to x+39/y+56; zombie shadows use plantshadow2.png at the current _ground track.
+  Detached parts: arm ground offset=85 (was 60), head ground offset=115 (was 90); ZombieArm gravity remains source-style 0.15. Collision no longer adds a persistent spin velocity.

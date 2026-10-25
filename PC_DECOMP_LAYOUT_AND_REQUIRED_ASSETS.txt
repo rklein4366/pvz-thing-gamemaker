@@ -1,0 +1,44 @@
+Plants vs. Zombies GameMaker Recreation — PC Decompilation Follow-up
+
+Reference source
+----------------
+https://github.com/ruslan831/PlantsVsZombies-decompilation
+
+The current lawn coordinate / camera implementation follows the original PC source:
+- Board.cpp: Board::GridToPixelX / GridToPixelY (80px columns, 100px lawn rows, LAWN_XMIN=40, LAWN_YMIN=80 in this stage)
+- Board.cpp: Board::GetSeedPacketPositionX / Board::GetSeedBankExtraWidth
+- Board.cpp: Board::InitLawnMowers and LawnMower.cpp: LawnMower::LawnMowerInitialize
+- CutScene.cpp: AnimateBoard, seed chooser timing and seed bank entrance
+- SeedChooserScreen.cpp: five rows of chooser slots, silhouette underlays, native button / hover behavior
+- SeedPacket.cpp: Pico129 seed cost labels and ContinuumBold14 sun count
+
+Manual art files
+----------------
+Copy these files into the indicated project folders:
+
+1. ORIGINAL PC lawn background: replace the existing Xbox/QEWide version at
+   datafiles/parts/images/background1.png
+   Keep the filename background1.png. It is drawn at native size and aligned to the PC board offset; do not stretch it.
+
+2. SeedChooser_Background.png -> datafiles/parts/images/SeedChooser_Background.png
+3. SeedChooser_Button_Disabled.png -> datafiles/parts/images/SeedChooser_Button_Disabled.png
+4. SeedPacketSilhouette.png -> datafiles/parts/images/SeedPacketSilhouette.png
+5. _ContinuumBold14.gif -> datafiles/fonts/_ContinuumBold14.gif
+   The matching metrics file datafiles/fonts/ContinuumBold14.txt is already included. The font atlas file can be found in the supplied Dropbox folder at /pvz files/data/_ContinuumBold14.gif.
+
+The regular SeedChooser_Button.png, SeedChooser_Button_Glow.png, SeedBank.png, ShovelBank.png, Shovel.png,
+and the DwarvenTodcraft / BrianneTod font atlases referenced by the game are already in the project.
+
+Layout changes in this build
+----------------------------
+- PC board offset: 220px; PC scene height offset: 0px; street pan: 380px.
+- The PC board uses native lawn artwork at (-220 - camera_x, 0) with no extra Xbox/QEWide bush overlays.
+- Lawn mowers begin at the PC source position x=-160 and correct row y positions.
+- Chooser silhouettes are drawn for exactly 5 rows (40 positions), with six bank slots under selected packets.
+- Seed cost text uses Pico129; chooser heading uses the gold DwarvenTodcraft18Yellow atlas; tooltip text uses BrianneTod12.
+- The sun bank uses ContinuumBold14 when the GIF atlas above is installed; while it is absent, the renderer falls back to an included PvZ bitmap font instead of GameMaker's default font.
+
+Verification caveat
+-------------------
+Source files passed static delimiter checks and the project archive integrity check. GameMaker itself was not available here,
+so run the project in GameMaker to verify the visuals / interactions in-game.
